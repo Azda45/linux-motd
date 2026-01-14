@@ -8,23 +8,25 @@ if [ "$(id -u)" -ne 0 ]; then
   exit 1
 fi
 
-echo ">>> Mendeteksi OS dan membersihkan MOTD lama..."
+echo ">>> Update custom MOTD (replace + backup jika sudah ada)..."
 
-# Hapus file penghalang
+# Hilangkan hushlogin biar MOTD tampil
 rm -f "$HOME/.hushlogin" 2>/dev/null || true
 
-# Untuk Ubuntu/Debian yang punya folder update-motd.d
-if [ -d "/etc/update-motd.d" ]; then
-  chmod -x /etc/update-motd.d/* 2>/dev/null || true
+TARGET="/etc/profile.d/00-custom-motd.sh"
+
+# Backup kalau sudah ada
+if [ -f "$TARGET" ]; then
+  TS="$(date +%Y%m%d-%H%M%S 2>/dev/null || echo backup)"
+  BKP="${TARGET}.bak-${TS}"
+  cp -a "$TARGET" "$BKP"
+  echo ">>> Backup dibuat: $BKP"
 fi
 
-# Kosongkan file statis /etc/motd
-: > /etc/motd
-
-echo ">>> Membuat script dashboard universal..."
-
-cat << 'MOTD' > /etc/profile.d/00-custom-motd.sh
+# Tulis MOTD baru (RAM FIX + lebih kompatibel)
+cat << 'MOTD' > "$TARGET"
 #!/bin/sh
+# CUSTOM_MOTD_UNIVERSAL v2 (RAM fix: cgroup aware)
 
 # Tampilkan hanya untuk shell interaktif
 case "$-" in
@@ -163,10 +165,10 @@ printf "Disk /    : %s\n" "$MY_DISK"
 printf "%s===================%s\n\n" "$C_BLUE" "$C_NC"
 MOTD
 
-chmod +x /etc/profile.d/00-custom-motd.sh
-echo ">>> Selesai! Logout/login lagi untuk melihat MOTD."
+chmod +x "$TARGET"
+echo ">>> MOTD ter-update. Logout/login lagi untuk lihat hasil."
 
-# Hapus installer ini setelah dijalankan
+# Hapus installer setelah selesai (self-delete)
 rm -f -- "$0" 2>/dev/null || true
 EOF
 
